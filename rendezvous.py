@@ -223,6 +223,7 @@ def discretize(data,bar_x,bar_u):
     """
     csm = data['csm']
     eps_machine = np.finfo(float).eps
+    # obtain the linearized dynamics matrices
     A,B,r,x_nl = csm.dltv(data['t_grid'],bar_x,bar_u,
                           **data['ode_options']['dltv'])
     for k in range(data['N']):

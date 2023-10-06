@@ -326,8 +326,7 @@ class ApolloCSM:
                                       for i in range(self.M)]),
                  pv=I3)
         r = dict(w=-self.Jinv.dot(np.cross(w,self.J.dot(w)))-A['ww'].dot(w),
-                 q=0.5*tools.qmult(q,tools.qpure(w))-A['qq'].dot(q)-
-                 A['qw'].dot(w))
+                 q=0.5*tools.qmult(q,tools.qpure(w))-A['qq'].dot(q)-A['qw'].dot(w))
         return A,r
 
     def sim(self,x0,u,t_f,n_sub=2,normalize_q=True,**odeopts):
@@ -575,8 +574,10 @@ class ApolloCSM:
             Psi_vqu = self.dltv_zget(z,'Psi_vqu')
             q_ref = x_ref[6:10]
             w_ref = x_ref[10:13]
+            
             # Linearize about current propagated trajectory value
             A,r = self.linearize(q_ref,w_ref,u_ref,t_ref)
+            
             # Compute time derivatives
             Phi_w_dot = A['ww'].dot(Phi_w)
             Psi_r_dot = Phi_w_inv.dot(r['w'])
@@ -603,7 +604,8 @@ class ApolloCSM:
             Psi_pw2_dot = Psi_vqw
             Psi_pEr2_dot = Psi_vrpppp
             Psi_pvqu_dot = Psi_vqu
-            # Create the conflomerate state time derivative
+            
+            # Create the conglomerate state time derivative
             dzdt = np.empty(self.dltv_z0.shape)
             dzdt[self.dltv_map['Phi_w']['idx']] = Phi_w_dot.flatten()
             dzdt[self.dltv_map['Psi_r']['idx']] = Psi_r_dot.flatten()
@@ -658,8 +660,10 @@ class ApolloCSM:
             pulse = u_star[k]
             z = tools.odeint(lambda t,z: dzdt(z,t,x_nl_ct[k](t),pulse),
                              x0=self.dltv_z0.copy(),t=t_nl[k],**odeopts)
+            
             # Extract the dynamic components' values at t_star[k+1]
             j = [mask_nl[k][i] for i in range(self.M)]
+            # STM 
             Phi_w_T = self.dltv_zget(z[-1],'Phi_w')
             Phi_w = [self.dltv_zget(z[j[i]],'Phi_w') for i in range(self.M)]
             Phi_w_inv = [la.inv(Phi_w[i]) for i in range(self.M)]
@@ -667,6 +671,8 @@ class ApolloCSM:
             Psi_u = [self.dltv_zget(z[j[i]],'Psi_u') for i in range(self.M)]
             Phi_q_T = self.dltv_zget(z[-1],'Phi_q')
             Phi_q = [self.dltv_zget(z[j[i]],'Phi_q') for i in range(self.M)]
+            
+            #
             Psi_E_T = self.dltv_zget(z[-1],'Psi_E')
             Psi_E = [self.dltv_zget(z[j[i]],'Psi_E') for i in range(self.M)]
             Psi_Ew = [self.dltv_zget(z[j[i]],'Psi_Ew') for i in range(self.M)]
@@ -693,6 +699,7 @@ class ApolloCSM:
             Psi_pvqu = [self.dltv_zget(z[j[i]],'Psi_pvqu')
                         for i in range(self.M)]
             Psi_pEr2_T = self.dltv_zget(z[-1],'Psi_pEr2')
+            
             # Compute the discrete-time update components
             thrust_vec_inertial = [tools.rotate(
                 self.thruster_vector[i]*self.thrust_max,
@@ -700,6 +707,7 @@ class ApolloCSM:
             A_ww = Phi_w_T
             B_w = A_ww.dot(np.column_stack([
                 Phi_w_inv[i].dot(self.Jinv_rxF[i]) for i in range(self.M)]))
+            
             r_w = (
                 # r_w_p
                 A_ww.dot(Psi_r)+
@@ -783,6 +791,7 @@ class ApolloCSM:
                        (Psi_pvq_T-Psi_pvq[i]-(T-pulse[i])*Psi_vq[i]).dot(
                            Psi_E[i])).dot(Psi_u[i]-Phi_w_inv[i]*pulse[i])).dot(
                                self.Jinv_rxF[i])for i in range(self.M)]))
+            
             # Concatenate
             Ad[k] = np.block([[np.eye(3),A_pv,A_pq,A_pw],
                               [np.zeros((3,3)),np.eye(3),A_vq,A_vw],
